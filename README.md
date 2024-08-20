@@ -4,7 +4,7 @@ A Rust implementation of YOLOv10 using ONNX Runtime (ort)
 ![people sitting around a table](./output/people1.jpg)
 
 ## Overview
-This small example demonstrates how to implement YOLOv10 in Rust using the [ort](https://github.com/pykeio/ort) crate as a backend for running ONNX models. `ort` is a wrapper around [ONNX Runtime](https://onnxruntime.ai/), designed to showcase the integration of ONNX with Rust.
+This small example demonstrates how to implement YOLOv10 in Rust using [ort](https://github.com/pykeio/ort) crate as a backend for running ONNX models. `ort` is a wrapper around [ONNX Runtime](https://onnxruntime.ai/).
 
 ## Getting Started
 
