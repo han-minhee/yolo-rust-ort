@@ -41,7 +41,7 @@ pub fn nms(boxes: Vec<BoundingBox>, iou_threshold: f32) -> Vec<BoundingBox> {
 }
 
 
-pub fn draw_boxes(image: &DynamicImage, boxes: Vec<BoundingBox>, input_size: (u32, u32)) -> RgbImage {
+pub fn draw_boxes(image: &DynamicImage, boxes: &Vec<BoundingBox>, input_size: (u32, u32)) -> RgbImage {
     let (img_width, img_height) = (image.width(), image.height());
     let mut dt = DrawTarget::new(img_width as i32, img_height as i32);
 

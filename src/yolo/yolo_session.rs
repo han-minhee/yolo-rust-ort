@@ -120,14 +120,16 @@ impl YoloSession {
         let normalized_image = normalize_image_f32(&loaded_image, None, None);
         let inferred_boxes = self.run_inference(normalized_image.image_array);
 
-        let filtered_boxes: Vec<BoundingBox> = nms(inferred_boxes, 0.45);
+        // YOLOv10 does not require NMS
+        // you can use them for other models
+        // let filtered_boxes: Vec<BoundingBox> = nms(inferred_boxes, 0.45);
 
         let result_image = draw_boxes(
             &DynamicImage::ImageRgb8(original_image),
-            filtered_boxes.clone(),
+            &inferred_boxes,
             self.input_size,
         );
 
-        self.save_outputs(result_image, filtered_boxes, image_path, None);
+        self.save_outputs(result_image, inferred_boxes, image_path, None);
     }
 }
