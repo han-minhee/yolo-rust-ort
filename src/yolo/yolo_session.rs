@@ -12,15 +12,17 @@ pub struct YoloSession {
     session: OrtInferenceSession,
     input_size: (u32, u32),
     use_nms: bool,
+    model_name: String,
 }
 
 impl YoloSession {
-    pub fn new(model_path: &Path, input_size: (u32, u32), use_nms: bool) -> ort::Result<Self> {
+    pub fn new(model_path: &Path, input_size: (u32, u32), use_nms: bool, model_name: String) -> ort::Result<Self> {
         let session = OrtInferenceSession::new(model_path)?;
         Ok(YoloSession {
             session,
             input_size,
-            use_nms
+            use_nms,
+            model_name,
         })
     }
 
@@ -36,32 +38,104 @@ impl YoloSession {
         let mut boxes = Vec::new();
         println!("output shape: {:?}", output.shape());
 
+        let original_output_shape = output.shape();
         // FIXME: different output for YOLOv8 and YOLOv10
         // for YOLOv10, the output is originally (1, 300, 6)
-        // for YOLOv8, the output is (1, 84, 8400)
-        // the output should be iterated in a different way
+        if self.model_name == "yolov10" {
+            let reshaped_output = output
+                .to_shape((original_output_shape[1], original_output_shape[2]))
+                .expect("Failed to reshape the output");
+            for detection in reshaped_output.outer_iter() {
+                let bbox_coords = [detection[0], detection[1], detection[2], detection[3]];
+                let object_confidence = detection[4];
+                let class_id = detection[5] as usize;
 
-        let original_output_shape = output.shape();
-        let reshaped_output = output
-            .to_shape((original_output_shape[1], original_output_shape[2]))
-            .expect("Failed to reshape the output");
-        for detection in reshaped_output.outer_iter() {
-            let bbox_coords = [detection[0], detection[1], detection[2], detection[3]];
-            let object_confidence = detection[4];
-            let class_id = detection[5] as usize;
+                let bbox = BoundingBox {
+                    x1: bbox_coords[0],
+                    y1: bbox_coords[1],
+                    x2: bbox_coords[2],
+                    y2: bbox_coords[3],
+                    class_id,
+                    probability: object_confidence,
+                };
 
-            let bbox = BoundingBox {
-                x1: bbox_coords[0],
-                y1: bbox_coords[1],
-                x2: bbox_coords[2],
-                y2: bbox_coords[3],
-                class_id,
-                probability: object_confidence,
-            };
-
-            if object_confidence >= 0.25 {
-                boxes.push(bbox);
+                if object_confidence >= 0.25 {
+                    boxes.push(bbox);
+                }
             }
+        }         else if self.model_name == "yolov8" {
+            // YOLOv8 output: (1, 84, 8400)
+            // 84 is for bounding box coordinates (4) and class scores (80)
+
+            // XXX: it currently only supports a single image inference
+            let reshaped_output = output
+                .to_shape((original_output_shape[1], original_output_shape[2]))
+                .expect("Failed to reshape the output");
+
+            // YOLOv8 output: (84, 8400)
+            // so there are 8400 bounding box candidates
+
+            for candidate_index in 0..reshaped_output.shape()[1] {
+                let bbox_coords = [
+                    reshaped_output[[0, candidate_index]],
+                    reshaped_output[[1, candidate_index]],
+                    reshaped_output[[2, candidate_index]],
+                    reshaped_output[[3, candidate_index]],
+                ];
+
+                let mut max_class_score = 0.0;
+                let mut class_id = 0;
+
+                // Iterate over the class scores (index 4 to 83)
+                for class_index in 4..84 {
+                    let class_score = reshaped_output[[class_index, candidate_index]];
+                    if class_score > max_class_score {
+                        max_class_score = class_score;
+                        class_id = class_index - 4; // class index starts from 0
+                    }
+                }
+
+                let object_confidence = reshaped_output[[4, candidate_index]]; // Object confidence score
+
+                // Construct the bounding box only if the confidence is above the threshold
+                if object_confidence >= 0.25 {
+
+                    let x_center = bbox_coords[0];
+                    let y_center = bbox_coords[1];
+                    // 1 84 8400 is (batch,xywh+80class_score,boxes_num )
+                    let w_original = bbox_coords[2];
+                    let h_original = bbox_coords[3];
+
+                    // FIXME: the image size is hardcoded as 640x640
+                    let w = w_original / 640.0;
+                    let h = h_original / 640.0;
+
+                    let x1 = x_center / 640.0 - w / 2.0;
+                    let y1 = y_center / 640.0 - h / 2.0;
+                    
+
+                    let x2 = x1 + w;
+                    let y2 = y1 + h;
+
+                    let bbox = BoundingBox {
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        class_id,
+                        probability: object_confidence,
+                    };
+
+                    println!("bbox: {:?}", bbox);
+
+                    boxes.push(bbox);
+                }
+            }
+        }
+
+        
+         else {
+            panic!("Unsupported model name: {}.\n Model should be 'yolov10' or 'yolov8'.", self.model_name);
         }
         boxes
     }
@@ -73,7 +147,7 @@ impl YoloSession {
         let interleaved_data: Vec<u8> = loaded_image
             .image_array
             .view()
-            .into_shape((
+            .to_shape((
                 3,
                 loaded_image.size.height as usize,
                 loaded_image.size.width as usize,

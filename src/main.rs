@@ -1,6 +1,6 @@
 use std::env;
 use std::path::Path;
-use yolo_v10_rust::yolo::yolo_session::YoloSession;
+use yolo_rust_ort::yolo::yolo_session::YoloSession;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -22,17 +22,25 @@ fn main() {
         &default_model_path
     };
 
-    let use_nms = if args.len() > 3 {
-        args[3].parse::<bool>().unwrap_or(true)
+    let model_name = if args.len() > 3 {
+        args[3].clone()
     } else {
-        println!("Warning: No NMS flag provided. Using default NMS flag 'true'.");
-        true
+        println!("Warning: No model name provided. Using default model name 'yolov10'.");
+        "yolov10".to_string()
+    };
+
+    let use_nms = if args.len() > 4 {
+        args[4].parse::<bool>().unwrap_or(false)
+    } else {
+        println!("Warning: No NMS flag provided. Using default NMS flag 'false'.");
+        false
     };
 
     let yolo_model = YoloSession::new(
         &model_path,
         (640, 640),
         use_nms,
+        model_name,
     ).expect("Failed to create YOLO model");
 
     yolo_model.process_image(image_path);

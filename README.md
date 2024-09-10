@@ -39,6 +39,10 @@ The processed image and its corresponding detection results will be saved in the
 - A JPEG image with bounding boxes drawn with colors according to the class IDs.
 - A text file containing the detection results in COCO format.
 
+### Requirements
+`raqote` requires some packages installed in the system, and in case of a Linux system, you should have `fontconfig` (`libfontconfig1-dev` for Ubuntu, and `fontconfig-devel` for Fedora) and `pkg-config` packages installed.
+
+
 ## Disclaimer
 This project is my first attempt at Rust, so the code can be really messy.
 

@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 image = "0.25.2"
-ndarray = "0.15.6"
+ndarray = "0.16.1"
 ort = "2.0.0-rc.4"
 raqote = "0.8.4"
 walkdir = "2.5.0"
