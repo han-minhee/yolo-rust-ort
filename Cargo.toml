@@ -1,5 +1,5 @@
 [package]
-name = "yolo-v10-rust"
+name = "yolo-rust-ort"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,5 +8,4 @@ image = "0.25.2"
 ndarray = "0.15.6"
 ort = "2.0.0-rc.4"
 raqote = "0.8.4"
-rusttype = "0.9.3"
 walkdir = "2.5.0"

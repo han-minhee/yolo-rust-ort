@@ -1,10 +1,10 @@
 # yolo-v10-rust
-A Rust implementation of YOLOv10 using ONNX Runtime (ort)
+A Rust implementation of YOLO using ONNX Runtime (ort)
 
 ![people sitting around a table](./output/people1.jpg)
 
 ## Overview
-This small example demonstrates how to implement YOLOv10 in Rust using [ort](https://github.com/pykeio/ort) crate as a backend for running ONNX models. `ort` is a wrapper around [ONNX Runtime](https://onnxruntime.ai/).
+This small example demonstrates how to implement Ultralytics YOLOv8/YOLOv10 in Rust using [ort](https://github.com/pykeio/ort) crate as a backend for running ONNX models. `ort` is a wrapper around [ONNX Runtime](https://onnxruntime.ai/).
 
 ## Getting Started
 
@@ -22,6 +22,16 @@ Ensure you have a basic Rust development environment set up. If you want to down
 2. **Run the Rust Application**
 ```bash
 cargo run -- path/to/your/image.jpg path/to/your/model.onnx
+```
+
+#### Setting NMS flag
+NMS is enabled by default. However, you can explicitly enable it by passing a boolean flag like:
+```
+cargo run -- sample/horses0.jpg onnx/yolov8n.onnx true
+```
+It isn't needed for YOLOv10, so you can pass false.
+```
+cargo run -- sample/horses0.jpg onnx/yolov8n.onnx false
 ```
 
 3. Check the output

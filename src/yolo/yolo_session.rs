@@ -11,14 +11,16 @@ use crate::{
 pub struct YoloSession {
     session: OrtInferenceSession,
     input_size: (u32, u32),
+    use_nms: bool,
 }
 
 impl YoloSession {
-    pub fn new(model_path: &Path, input_size: (u32, u32)) -> ort::Result<Self> {
+    pub fn new(model_path: &Path, input_size: (u32, u32), use_nms: bool) -> ort::Result<Self> {
         let session = OrtInferenceSession::new(model_path)?;
         Ok(YoloSession {
             session,
             input_size,
+            use_nms
         })
     }
 
@@ -32,8 +34,16 @@ impl YoloSession {
             .expect("Failed to extract tensor")
             .into_owned();
         let mut boxes = Vec::new();
+        println!("output shape: {:?}", output.shape());
+
+        // FIXME: different output for YOLOv8 and YOLOv10
+        // for YOLOv10, the output is originally (1, 300, 6)
+        // for YOLOv8, the output is (1, 84, 8400)
+        // the output should be iterated in a different way
+
+        let original_output_shape = output.shape();
         let reshaped_output = output
-            .into_shape((300, 6))
+            .to_shape((original_output_shape[1], original_output_shape[2]))
             .expect("Failed to reshape the output");
         for detection in reshaped_output.outer_iter() {
             let bbox_coords = [detection[0], detection[1], detection[2], detection[3]];
@@ -118,11 +128,14 @@ impl YoloSession {
         let (original_image, loaded_image) = self.load_and_preprocess_image(image_path);
 
         let normalized_image = normalize_image_f32(&loaded_image, None, None);
-        let inferred_boxes = self.run_inference(normalized_image.image_array);
+        let mut inferred_boxes = self.run_inference(normalized_image.image_array);
 
         // YOLOv10 does not require NMS
         // you can use them for other models
-        // let filtered_boxes: Vec<BoundingBox> = nms(inferred_boxes, 0.45);
+        // XXX: it's not hard coded as "0.45", which is the default value for Ultralytics YOLOv8
+        if self.use_nms {
+           inferred_boxes = nms(inferred_boxes, 0.45);
+        }
 
         let result_image = draw_boxes(
             &DynamicImage::ImageRgb8(original_image),
