@@ -16,7 +16,12 @@ pub struct YoloSession {
 }
 
 impl YoloSession {
-    pub fn new(model_path: &Path, input_size: (u32, u32), use_nms: bool, model_name: String) -> ort::Result<Self> {
+    pub fn new(
+        model_path: &Path,
+        input_size: (u32, u32),
+        use_nms: bool,
+        model_name: String,
+    ) -> ort::Result<Self> {
         let session = OrtInferenceSession::new(model_path)?;
         Ok(YoloSession {
             session,
@@ -63,9 +68,7 @@ impl YoloSession {
                     boxes.push(bbox);
                 }
             }
-        }         else if self.model_name == "yolov8" {
-            // YOLOv8 output: (1, 84, 8400)
-            // 84 is for bounding box coordinates (4) and class scores (80)
+        } else if self.model_name == "yolov8" {
 
             // XXX: it currently only supports a single image inference
             let reshaped_output = output
@@ -77,42 +80,34 @@ impl YoloSession {
 
             for candidate_index in 0..reshaped_output.shape()[1] {
                 let bbox_coords = [
-                    reshaped_output[[0, candidate_index]],
-                    reshaped_output[[1, candidate_index]],
-                    reshaped_output[[2, candidate_index]],
-                    reshaped_output[[3, candidate_index]],
+                    reshaped_output[[80, candidate_index]],
+                    reshaped_output[[81, candidate_index]],
+                    reshaped_output[[82, candidate_index]],
+                    reshaped_output[[83, candidate_index]],
                 ];
 
                 let mut max_class_score = 0.0;
                 let mut class_id = 0;
 
-                // Iterate over the class scores (index 4 to 83)
-                for class_index in 4..84 {
+                // Iterate over the class scores (index 0 to 79)
+                for class_index in 0..79 {
                     let class_score = reshaped_output[[class_index, candidate_index]];
                     if class_score > max_class_score {
                         max_class_score = class_score;
-                        class_id = class_index - 4; // class index starts from 0
+                        class_id = class_index; // class index starts from 
                     }
                 }
 
-                let object_confidence = reshaped_output[[4, candidate_index]]; // Object confidence score
-
                 // Construct the bounding box only if the confidence is above the threshold
-                if object_confidence >= 0.25 {
-
+                if max_class_score >= 0.25 {
                     let x_center = bbox_coords[0];
                     let y_center = bbox_coords[1];
                     // 1 84 8400 is (batch,xywh+80class_score,boxes_num )
-                    let w_original = bbox_coords[2];
-                    let h_original = bbox_coords[3];
+                    let w = bbox_coords[2];
+                    let h = bbox_coords[3];
 
-                    // FIXME: the image size is hardcoded as 640x640
-                    let w = w_original / 640.0;
-                    let h = h_original / 640.0;
-
-                    let x1 = x_center / 640.0 - w / 2.0;
-                    let y1 = y_center / 640.0 - h / 2.0;
-                    
+                    let x1 = x_center - w / 2.0;
+                    let y1 = y_center - h / 2.0;
 
                     let x2 = x1 + w;
                     let y2 = y1 + h;
@@ -123,7 +118,7 @@ impl YoloSession {
                         x2,
                         y2,
                         class_id,
-                        probability: object_confidence,
+                        probability: max_class_score,
                     };
 
                     println!("bbox: {:?}", bbox);
@@ -131,11 +126,11 @@ impl YoloSession {
                     boxes.push(bbox);
                 }
             }
-        }
-
-        
-         else {
-            panic!("Unsupported model name: {}.\n Model should be 'yolov10' or 'yolov8'.", self.model_name);
+        } else {
+            panic!(
+                "Unsupported model name: {}.\n Model should be 'yolov10' or 'yolov8'.",
+                self.model_name
+            );
         }
         boxes
     }
@@ -208,7 +203,7 @@ impl YoloSession {
         // you can use them for other models
         // XXX: it's not hard coded as "0.45", which is the default value for Ultralytics YOLOv8
         if self.use_nms {
-           inferred_boxes = nms(inferred_boxes, 0.45);
+            inferred_boxes = nms(inferred_boxes, 0.45);
         }
 
         let result_image = draw_boxes(
