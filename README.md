@@ -17,7 +17,7 @@ Ensure you have a basic Rust development environment set up. If you want to down
    ```bash
    python ./download_model.py --model yolov10n.pt
    ```
-   Alternatively, you can use the pre-included model at ./onnx/yolov10n.pt.
+   Alternatively, you can use the pre-included model at `./onnx/yolov10n.onnx` or `./onnx/yolov8n.onnx`.
 
 2. **Run the Rust Application**
 ```bash
