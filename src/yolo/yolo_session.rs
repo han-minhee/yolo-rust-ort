@@ -44,8 +44,10 @@ impl YoloSession {
         println!("output shape: {:?}", output.shape());
 
         let original_output_shape = output.shape();
-        // FIXME: different output for YOLOv8 and YOLOv10
-        // for YOLOv10, the output is originally (1, 300, 6)
+
+
+        // FIXME: This is a temporary solution to handle different output shapes
+
         if self.model_name == "yolov10" {
             let reshaped_output = output
                 .to_shape((original_output_shape[1], original_output_shape[2]))
@@ -69,64 +71,44 @@ impl YoloSession {
                 }
             }
         } else if self.model_name == "yolov8" {
-
-            // XXX: it currently only supports a single image inference
             let reshaped_output = output
                 .to_shape((original_output_shape[1], original_output_shape[2]))
                 .expect("Failed to reshape the output");
 
-            // YOLOv8 output: (84, 8400)
-            // so there are 8400 bounding box candidates
+            // FIXME: it needs to be implemented in a more generic way
+            // and should be optimized
+            // loop for each detection (total 8400)
+            for i in 0..reshaped_output.shape()[1]{
+                // get x,y,w,h
+                let x = reshaped_output[[0, i]];
+                let y = reshaped_output[[1, i]];
+                let w = reshaped_output[[2, i]];
+                let h = reshaped_output[[3, i]];
 
-            for candidate_index in 0..reshaped_output.shape()[1] {
-                let bbox_coords = [
-                    reshaped_output[[80, candidate_index]],
-                    reshaped_output[[81, candidate_index]],
-                    reshaped_output[[82, candidate_index]],
-                    reshaped_output[[83, candidate_index]],
-                ];
+                // get the highest class probability
+                let mut max_class_prob = 0.0;
+                let mut max_class_id = 0;
 
-                let mut max_class_score = 0.0;
-                let mut class_id = 0;
-
-                // Iterate over the class scores (index 0 to 79)
-                for class_index in 0..79 {
-                    let class_score = reshaped_output[[class_index, candidate_index]];
-                    if class_score > max_class_score {
-                        max_class_score = class_score;
-                        class_id = class_index; // class index starts from 
+                for j in 4..reshaped_output.shape()[0]{
+                    if reshaped_output[[j, i]] > max_class_prob{
+                        max_class_prob = reshaped_output[[j, i]];
+                        max_class_id = j - 4;
                     }
                 }
 
-                // Construct the bounding box only if the confidence is above the threshold
-                if max_class_score >= 0.25 {
-                    let x_center = bbox_coords[0];
-                    let y_center = bbox_coords[1];
-                    // 1 84 8400 is (batch,xywh+80class_score,boxes_num )
-                    let w = bbox_coords[2];
-                    let h = bbox_coords[3];
-
-                    let x1 = x_center - w / 2.0;
-                    let y1 = y_center - h / 2.0;
-
-                    let x2 = x1 + w;
-                    let y2 = y1 + h;
-
+                if max_class_prob > 0.25{
                     let bbox = BoundingBox {
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        class_id,
-                        probability: max_class_score,
+                        x1: x - w / 2.0,
+                        y1: y - h / 2.0,
+                        x2: x + w / 2.0,
+                        y2: y + h / 2.0,
+                        class_id: max_class_id,
+                        probability: max_class_prob,
                     };
-
-                    println!("bbox: {:?}", bbox);
-
                     boxes.push(bbox);
                 }
-            }
-        } else {
+        }
+     } else {
             panic!(
                 "Unsupported model name: {}.\n Model should be 'yolov10' or 'yolov8'.",
                 self.model_name
