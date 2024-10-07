@@ -15,7 +15,7 @@ pub struct BoundingBox {
 
 impl BoundingBox {
     pub fn intersection(&self, other: &BoundingBox) -> f32 {
-        (self.x2.min(other.x2) - self.x1.max(other.x1)) * (self.y2.min(other.y2) - self.y1.max(other.y1))
+        (self.x2.min(other.x2) - self.x1.max(other.x1)).max(0.0) * (self.y2.min(other.y2) - self.y1.max(other.y1)).max(0.0)
     }
 
     pub fn union(&self, other: &BoundingBox) -> f32 {
@@ -100,4 +100,14 @@ pub fn output_to_yolo_txt(boxes: Vec<BoundingBox>, image_width: u32, image_heigh
         yolo_output.push_str(&format!("{} {} {} {} {}\n", bbox.class_id, x_center / image_width as f32, y_center / image_height as f32, width / image_width as f32, height / image_height as f32));
     }
     std::fs::write(output_path, yolo_output).expect("Failed to write YOLO output to file");
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_intersection() {
+        let a = BoundingBox { x1: -2.0, y1: -2.0, x2: -1.0, y2: -1.0, class_id: 0, probability: 0.0 };
+        let b = BoundingBox { x1: 1.0, y1: 1.0, x2: 2.0, y2: 2.0, class_id: 0, probability: 0.0 };
+        assert_eq!(a.intersection(&b), 0.0); //should be zero
+    }
 }
