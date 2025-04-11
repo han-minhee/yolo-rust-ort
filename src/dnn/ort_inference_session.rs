@@ -1,5 +1,7 @@
 use ndarray::{ArrayBase, Dim, OwnedRepr};
-use ort::{Session, SessionBuilder, SessionOutputs, Tensor, Value, SessionInputs, SessionInputValue};
+use ort::session::{Session, SessionInputs, SessionInputValue, SessionOutputs};
+use ort::session::builder::SessionBuilder;
+use ort::value::{Tensor, Value};
 use std::path::Path;
 use std::time::Instant;
 use std::borrow::Cow;
