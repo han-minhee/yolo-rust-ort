@@ -31,15 +31,15 @@ impl YoloSession {
         })
     }
 
-    pub fn run_inference(&self, input_tensor: Array4<f32>) -> Vec<BoundingBox> {
+    pub fn run_inference(&mut self, input_tensor: Array4<f32>) -> Vec<BoundingBox> {
         let outputs = self
             .session
             .run_inference(input_tensor)
             .expect("Inference failed");
         let output = outputs["output0"]
-            .try_extract_tensor::<f32>()
+            .try_extract_array::<f32>()
             .expect("Failed to extract tensor")
-            .into_owned();
+            .to_owned();
         let mut boxes = Vec::new();
         println!("output shape: {:?}", output.shape());
 
@@ -175,16 +175,15 @@ impl YoloSession {
         );
     }
 
-    pub fn process_image(&self, image_path: &str) {
+    pub fn process_image(&mut self, image_path: &str) {
         let (original_image, loaded_image) = self.load_and_preprocess_image(image_path);
 
         let normalized_image = normalize_image_f32(&loaded_image, None, None);
         let mut inferred_boxes = self.run_inference(normalized_image.image_array);
 
         // YOLOv10 does not require NMS
-        // you can use them for other models
-        // XXX: it's not hard coded as "0.45", which is the default value for Ultralytics YOLOv8
-        if self.use_nms {
+        // YOLOv8 requires NMS
+        if self.model_name == "yolov8" || self.use_nms {
             inferred_boxes = nms(inferred_boxes, 0.45);
         }
 

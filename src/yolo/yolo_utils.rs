@@ -29,13 +29,20 @@ impl BoundingBox {
 
 
 pub fn nms(boxes: Vec<BoundingBox>, iou_threshold: f32) -> Vec<BoundingBox> {
-    let mut sorted_boxes = boxes.clone();
-    sorted_boxes.sort_by(|a, b| b.probability.partial_cmp(&a.probability).unwrap());
     let mut result = Vec::new();
-    while !sorted_boxes.is_empty() {
-        let best_box = sorted_boxes.remove(0);
-        result.push(best_box);
-        sorted_boxes.retain(|bbox| best_box.iou(&bbox) < iou_threshold);
+    let mut boxes_by_class: std::collections::HashMap<usize, Vec<BoundingBox>> = std::collections::HashMap::new();
+
+    for bbox in boxes {
+        boxes_by_class.entry(bbox.class_id).or_default().push(bbox);
+    }
+
+    for (_, mut class_boxes) in boxes_by_class {
+        class_boxes.sort_by(|a, b| b.probability.partial_cmp(&a.probability).unwrap());
+        while !class_boxes.is_empty() {
+            let best_box = class_boxes.remove(0);
+            result.push(best_box);
+            class_boxes.retain(|bbox| best_box.iou(&bbox) < iou_threshold);
+        }
     }
     result
 }

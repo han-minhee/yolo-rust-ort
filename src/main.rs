@@ -35,7 +35,7 @@ fn main() {
         }
     };
 
-    let yolo_model = YoloSession::new(&model_path, (640, 640), use_nms, model_name)
+    let mut yolo_model = YoloSession::new(&model_path, (640, 640), use_nms, model_name)
         .expect("Failed to create YOLO model");
 
     yolo_model.process_image(image_path);

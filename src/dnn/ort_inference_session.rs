@@ -17,9 +17,9 @@ impl OrtInferenceSession {
     }
 
     pub fn run_inference(
-        &self,
+        &mut self,
         input_image: ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>
-    ) -> ort::Result<SessionOutputs> {
+    ) -> ort::Result<SessionOutputs<'_>> {
         let time_pre_compute = Instant::now();
 
     let shape = input_image.shape().to_vec();
