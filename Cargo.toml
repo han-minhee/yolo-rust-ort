@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-image = "0.25.9"
+image = "0.25.10"
 ndarray = "0.17.2"
 ort = { version = "2.0.0-rc.11", features = ["ndarray"] }
 raqote = { version = "0.8.5", default-features = false }
